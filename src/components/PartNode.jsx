@@ -1,37 +1,28 @@
-import { useState } from 'react';
 import PropTypes from 'prop-types';
 
-function PartNode({
-  id,
-  blueprint,
-  parts,
-  blueprints,
-  funds,
-  onResearch,
-  onOrder,
-  onAssemble,
-  onSell,
-  onRateChange,
-  onSellThresholdChange,
-  renderChild,
-  canAssemble,
-}) {
-  const state = parts[id];
-  const childIds = Object.keys(blueprint.requirements || {});
-  const requirements = childIds.map((childId) => ({
-    id: childId,
-    qty: blueprint.requirements[childId],
-  }));
-
-  const [collapsed, setCollapsed] = useState(false);
+function PartNode({ data }) {
+  const {
+    id,
+    blueprint,
+    state,
+    funds,
+    requirements,
+    onResearch,
+    onOrder,
+    onAssemble,
+    onSell,
+    onRateChange,
+    onSellThresholdChange,
+    canAssemble,
+  } = data;
 
   const buildCost = requirements.reduce(
-    (total, { id: childId, qty }) => total + blueprints[childId].buyCost * qty,
+    (total, { buyCost, qty }) => total + buyCost * qty,
     0,
   );
 
   return (
-    <div className="node-card">
+    <div className="node-card flow-node" aria-label={blueprint.name}>
       <div className="node-head">
         <div>
           <p className="eyebrow">{state.unlocked ? 'Unlocked' : 'Research required'}</p>
@@ -54,13 +45,6 @@ function PartNode({
             </div>
           )}
         </div>
-        {requirements.length > 0 && (
-          <div className="node-actions">
-            <button className="ghost" type="button" onClick={() => setCollapsed((prev) => !prev)}>
-              {collapsed ? 'Expand branch' : 'Collapse branch'}
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="controls">
@@ -141,18 +125,12 @@ function PartNode({
         <div className="requirements">
           <p className="label">Requires</p>
           <ul>
-            {requirements.map(({ id: childId, qty }) => (
+            {requirements.map(({ id: childId, qty, name }) => (
               <li key={childId}>
-                <span className="muted">{qty}x</span> {blueprints[childId].name} — owned: {parts[childId].inventory}
+                <span className="muted">{qty}x</span> {name}
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {requirements.length > 0 && !collapsed && (
-        <div className="children">
-          {requirements.map(({ id: childId }) => renderChild(childId))}
         </div>
       )}
     </div>
@@ -160,33 +138,39 @@ function PartNode({
 }
 
 PartNode.propTypes = {
-  id: PropTypes.string.isRequired,
-  blueprint: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
-    buyCost: PropTypes.number.isRequired,
-    salePrice: PropTypes.number.isRequired,
-    researchCost: PropTypes.number.isRequired,
-    requirements: PropTypes.objectOf(PropTypes.number).isRequired,
-  }).isRequired,
-  parts: PropTypes.objectOf(
-    PropTypes.shape({
+  data: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    blueprint: PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      buyCost: PropTypes.number.isRequired,
+      salePrice: PropTypes.number.isRequired,
+      researchCost: PropTypes.number.isRequired,
+      requirements: PropTypes.objectOf(PropTypes.number).isRequired,
+    }).isRequired,
+    state: PropTypes.shape({
       unlocked: PropTypes.bool.isRequired,
       inventory: PropTypes.number.isRequired,
       purchaseRate: PropTypes.number.isRequired,
       sellThreshold: PropTypes.number.isRequired,
-    }),
-  ).isRequired,
-  blueprints: PropTypes.object.isRequired,
-  funds: PropTypes.number.isRequired,
-  onResearch: PropTypes.func.isRequired,
-  onOrder: PropTypes.func.isRequired,
-  onAssemble: PropTypes.func.isRequired,
-  onSell: PropTypes.func.isRequired,
-  onRateChange: PropTypes.func.isRequired,
-  onSellThresholdChange: PropTypes.func.isRequired,
-  renderChild: PropTypes.func.isRequired,
-  canAssemble: PropTypes.func.isRequired,
+    }).isRequired,
+    funds: PropTypes.number.isRequired,
+    requirements: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        name: PropTypes.string.isRequired,
+        qty: PropTypes.number.isRequired,
+        buyCost: PropTypes.number.isRequired,
+      }),
+    ).isRequired,
+    onResearch: PropTypes.func.isRequired,
+    onOrder: PropTypes.func.isRequired,
+    onAssemble: PropTypes.func.isRequired,
+    onSell: PropTypes.func.isRequired,
+    onRateChange: PropTypes.func.isRequired,
+    onSellThresholdChange: PropTypes.func.isRequired,
+    canAssemble: PropTypes.func.isRequired,
+  }).isRequired,
 };
 
 export default PartNode;

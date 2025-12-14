@@ -98,6 +98,25 @@ body {
   gap: 18px;
 }
 
+.tree-graph {
+  height: 800px;
+  border: 1px solid #e3e6ed;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(13, 17, 38, 0.08);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.flow-node {
+  width: 340px;
+  max-width: 340px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
 .node-card {
   background: white;
   border: 1px solid #e3e6ed;
