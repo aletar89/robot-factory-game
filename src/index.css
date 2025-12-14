@@ -208,6 +208,90 @@ input[type='number'] {
   gap: 12px;
 }
 
+.summary-section {
+  margin-top: 32px;
+}
+
+.summary-table {
+  display: grid;
+  gap: 8px;
+  background: white;
+  border: 1px solid #e3e6ed;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 20px rgba(13, 17, 38, 0.04);
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr) repeat(3, 1.3fr);
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.summary-header {
+  font-weight: 700;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-footer {
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+}
+
+.positive {
+  color: #15803d;
+}
+
+.negative {
+  color: #b91c1c;
+}
+
+@media (max-width: 840px) {
+  .summary-row {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    grid-template-areas:
+      'part buy sale net'
+      'purchase purchase sell sell'
+      'spend spend earn earn';
+  }
+
+  .summary-row > :nth-child(1) {
+    grid-area: part;
+  }
+
+  .summary-row > :nth-child(2) {
+    grid-area: buy;
+  }
+
+  .summary-row > :nth-child(3) {
+    grid-area: sale;
+  }
+
+  .summary-row > :nth-child(4) {
+    grid-area: purchase;
+  }
+
+  .summary-row > :nth-child(5) {
+    grid-area: sell;
+  }
+
+  .summary-row > :nth-child(6) {
+    grid-area: spend;
+  }
+
+  .summary-row > :nth-child(7) {
+    grid-area: earn;
+  }
+
+  .summary-row > :nth-child(8) {
+    grid-area: net;
+    justify-self: end;
+  }
+}
+
 @media (max-width: 840px) {
   .hero {
     grid-template-columns: 1fr;

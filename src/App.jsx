@@ -323,45 +323,64 @@ function App() {
     setFunds((previous) => previous + blueprint.salePrice);
   };
 
-  const handleAutomationTick = () => {
-    setParts((previous) => {
-      const updated = { ...previous };
-      let updatedFunds = funds;
+  const simulateAutomationCycle = (currentParts, currentFunds) => {
+    const nextParts = Object.entries(currentParts).reduce((acc, [id, state]) => {
+      acc[id] = { ...state };
+      return acc;
+    }, {});
 
-      Object.values(blueprints).forEach((blueprint) => {
-        const state = updated[blueprint.id];
-        if (!state.unlocked) return;
+    let availableFunds = currentFunds;
+    const rows = [];
 
-        if (state.purchaseRate > 0 && updatedFunds > 0) {
-          const affordable = Math.min(
-            state.purchaseRate,
-            Math.floor(updatedFunds / blueprint.buyCost),
-          );
-          if (affordable > 0) {
-            updatedFunds -= affordable * blueprint.buyCost;
-            updated[blueprint.id] = {
-              ...state,
-              inventory: state.inventory + affordable,
-            };
-          }
+    Object.values(blueprints).forEach((blueprint) => {
+      const state = nextParts[blueprint.id];
+      if (!state.unlocked) return;
+
+      let spent = 0;
+      let earned = 0;
+
+      if (state.purchaseRate > 0 && availableFunds > 0) {
+        const affordable = Math.min(
+          state.purchaseRate,
+          Math.floor(availableFunds / blueprint.buyCost),
+        );
+
+        if (affordable > 0) {
+          spent = affordable * blueprint.buyCost;
+          availableFunds -= spent;
+          state.inventory += affordable;
         }
-
-        if (state.sellThreshold >= 0 && state.inventory > state.sellThreshold) {
-          const sellable = state.inventory - state.sellThreshold;
-          updatedFunds += sellable * blueprint.salePrice;
-          updated[blueprint.id] = {
-            ...updated[blueprint.id],
-            inventory: state.sellThreshold,
-          };
-        }
-      });
-
-      if (updatedFunds !== funds) {
-        setFunds(updatedFunds);
       }
 
-      return updated;
+      if (state.sellThreshold >= 0 && state.inventory > state.sellThreshold) {
+        const sellable = state.inventory - state.sellThreshold;
+        earned = sellable * blueprint.salePrice;
+        availableFunds += earned;
+        state.inventory -= sellable;
+      }
+
+      rows.push({
+        id: blueprint.id,
+        name: blueprint.name,
+        buyCost: blueprint.buyCost,
+        salePrice: blueprint.salePrice,
+        purchaseRate: state.purchaseRate,
+        sellThreshold: state.sellThreshold,
+        spent,
+        earned,
+        net: earned - spent,
+      });
     });
+
+    const totalNet = rows.reduce((total, { net }) => total + net, 0);
+
+    return { rows, totalNet, resultingParts: nextParts, resultingFunds: availableFunds };
+  };
+
+  const handleAutomationTick = () => {
+    const { resultingParts, resultingFunds } = simulateAutomationCycle(parts, funds);
+    setParts(resultingParts);
+    setFunds(resultingFunds);
   };
 
   const handlePurchaseRateChange = (id, value) => {
@@ -379,6 +398,11 @@ function App() {
       [id]: { ...previous[id], sellThreshold: threshold },
     }));
   };
+
+  const automationSummary = useMemo(
+    () => simulateAutomationCycle(parts, funds),
+    [funds, parts],
+  );
 
   const renderTree = (id) => (
     <PartNode
@@ -434,6 +458,59 @@ function App() {
           </div>
         </div>
         <div className="tree-grid">{renderTree('robot')}</div>
+      </section>
+
+      <section className="summary-section">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Cycle outlook</p>
+            <h2>Automation summary for unlocked parts</h2>
+            <p className="muted">Preview expected spending and revenue before running a cycle.</p>
+          </div>
+        </div>
+
+        {automationSummary.rows.length === 0 ? (
+          <p className="muted">Research parts to see an automation summary.</p>
+        ) : (
+          <div className="summary-table" role="table" aria-label="Automation summary">
+            <div className="summary-row summary-header" role="row">
+              <div role="columnheader">Part</div>
+              <div role="columnheader">Buy cost</div>
+              <div role="columnheader">Sale price</div>
+              <div role="columnheader">Purchase / cycle</div>
+              <div role="columnheader">Sell down to</div>
+              <div role="columnheader">Spend this cycle</div>
+              <div role="columnheader">Earn this cycle</div>
+              <div role="columnheader">Net change</div>
+            </div>
+            {automationSummary.rows.map((row) => (
+              <div className="summary-row" role="row" key={row.id}>
+                <div role="cell">{row.name}</div>
+                <div role="cell">${row.buyCost.toLocaleString()}</div>
+                <div role="cell">${row.salePrice.toLocaleString()}</div>
+                <div role="cell">{row.purchaseRate}</div>
+                <div role="cell">{row.sellThreshold}</div>
+                <div role="cell" className="muted">-${row.spent.toLocaleString()}</div>
+                <div role="cell" className="muted">+${row.earned.toLocaleString()}</div>
+                <div role="cell" className={row.net >= 0 ? 'positive' : 'negative'}>
+                  {row.net >= 0 ? '+' : ''}{row.net.toLocaleString()}
+                </div>
+              </div>
+            ))}
+            <div className="summary-row summary-footer" role="row">
+              <div role="cell">Projected net per cycle</div>
+              <div role="cell" />
+              <div role="cell" />
+              <div role="cell" />
+              <div role="cell" />
+              <div role="cell" />
+              <div role="cell" />
+              <div role="cell" className={automationSummary.totalNet >= 0 ? 'positive' : 'negative'}>
+                {automationSummary.totalNet >= 0 ? '+' : ''}{automationSummary.totalNet.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
