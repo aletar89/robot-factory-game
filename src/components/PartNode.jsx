@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import PropTypes from 'prop-types';
 
 function PartNode({
@@ -21,6 +22,8 @@ function PartNode({
     id: childId,
     qty: blueprint.requirements[childId],
   }));
+
+  const [collapsed, setCollapsed] = useState(false);
 
   const buildCost = requirements.reduce(
     (total, { id: childId, qty }) => total + blueprints[childId].buyCost * qty,
@@ -51,6 +54,13 @@ function PartNode({
             </div>
           )}
         </div>
+        {requirements.length > 0 && (
+          <div className="node-actions">
+            <button className="ghost" type="button" onClick={() => setCollapsed((prev) => !prev)}>
+              {collapsed ? 'Expand branch' : 'Collapse branch'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="controls">
@@ -140,7 +150,7 @@ function PartNode({
         </div>
       )}
 
-      {requirements.length > 0 && (
+      {requirements.length > 0 && !collapsed && (
         <div className="children">
           {requirements.map(({ id: childId }) => renderChild(childId))}
         </div>

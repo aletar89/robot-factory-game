@@ -245,7 +245,7 @@ const initialState = () => {
 };
 
 function App() {
-  const [funds, setFunds] = useState(5000);
+  const [funds, setFunds] = useState(5000000);
   const [parts, setParts] = useState(initialState);
 
   const unlockableParts = useMemo(() => new Set(Object.keys(blueprints)), []);
@@ -257,10 +257,20 @@ function App() {
     if (funds < blueprint.researchCost) return;
 
     setFunds((previous) => previous - blueprint.researchCost);
-    setParts((previous) => ({
-      ...previous,
-      [id]: { ...previous[id], unlocked: true },
-    }));
+    setParts((previous) => {
+      const updated = {
+        ...previous,
+        [id]: { ...previous[id], unlocked: true },
+      };
+
+      Object.keys(blueprint.requirements || {}).forEach((childId) => {
+        if (!updated[childId]?.unlocked) {
+          updated[childId] = { ...updated[childId], unlocked: true };
+        }
+      });
+
+      return updated;
+    });
   };
 
   const handleOrder = (id) => {

@@ -123,6 +123,16 @@ body {
   align-items: center;
 }
 
+.node-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.node-actions button {
+  white-space: nowrap;
+}
+
 .controls {
   margin: 12px 0;
 }
