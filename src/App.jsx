@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import ReactFlow, { Background, Controls, MiniMap } from 'reactflow';
+import 'reactflow/dist/style.css';
 import PartNode from './components/PartNode.jsx';
 
 const blueprints = {
@@ -404,24 +406,104 @@ function App() {
     [funds, parts],
   );
 
-  const renderTree = (id) => (
-    <PartNode
-      key={id}
-      id={id}
-      blueprint={blueprints[id]}
-      parts={parts}
-      blueprints={blueprints}
-      funds={funds}
-      onResearch={handleResearch}
-      onOrder={handleOrder}
-      onAssemble={handleAssemble}
-      onSell={handleSell}
-      onRateChange={handlePurchaseRateChange}
-      onSellThresholdChange={handleSellThresholdChange}
-      renderChild={renderTree}
-      canAssemble={canAssemble}
-    />
-  );
+  const { nodes, edges } = useMemo(() => {
+    const levels = new Map();
+    const calculateDepth = (id, depth) => {
+      const currentDepth = levels.get(id) ?? depth;
+      if (depth > currentDepth) {
+        levels.set(id, depth);
+      } else if (!levels.has(id)) {
+        levels.set(id, depth);
+      }
+
+      const blueprint = blueprints[id];
+      Object.keys(blueprint.requirements || {}).forEach((childId) => {
+        calculateDepth(childId, depth + 1);
+      });
+    };
+
+    calculateDepth('robot', 0);
+
+    const layers = new Map();
+    levels.forEach((depth, id) => {
+      const list = layers.get(depth) ?? [];
+      list.push(id);
+      layers.set(depth, list);
+    });
+
+    const horizontalSpacing = 320;
+    const verticalSpacing = 260;
+
+    const flowNodes = [];
+    const sortedLayers = [...layers.entries()].sort(([a], [b]) => a - b);
+
+    sortedLayers.forEach(([depth, ids]) => {
+      const orderedIds = [...ids].sort();
+
+      orderedIds.forEach((id, index) => {
+        const blueprint = blueprints[id];
+        const requirements = Object.entries(blueprint.requirements || {}).map(
+          ([childId, qty]) => ({
+            id: childId,
+            name: blueprints[childId].name,
+            qty,
+            buyCost: blueprints[childId].buyCost,
+          }),
+        );
+
+        flowNodes.push({
+          id,
+          type: 'part',
+          position: {
+            x: index * horizontalSpacing,
+            y: depth * verticalSpacing,
+          },
+          draggable: false,
+          data: {
+            id,
+            blueprint,
+            state: parts[id],
+            funds,
+            requirements,
+            onResearch: handleResearch,
+            onOrder: handleOrder,
+            onAssemble: handleAssemble,
+            onSell: handleSell,
+            onRateChange: handlePurchaseRateChange,
+            onSellThresholdChange: handleSellThresholdChange,
+            canAssemble,
+          },
+        });
+      });
+    });
+
+    const flowEdges = [];
+    Object.values(blueprints).forEach((blueprint) => {
+      Object.keys(blueprint.requirements || {}).forEach((childId) => {
+        flowEdges.push({
+          id: `${childId}-${blueprint.id}`,
+          source: childId,
+          target: blueprint.id,
+          type: 'smoothstep',
+          animated: !parts[blueprint.id].unlocked,
+        });
+      });
+    });
+
+    return { nodes: flowNodes, edges: flowEdges };
+  }, [
+    parts,
+    funds,
+    handleResearch,
+    handleOrder,
+    handleAssemble,
+    handleSell,
+    handlePurchaseRateChange,
+    handleSellThresholdChange,
+    canAssemble,
+  ]);
+
+  const nodeTypes = { part: PartNode };
 
   return (
     <div className="page">
@@ -454,10 +536,25 @@ function App() {
           <div>
             <p className="eyebrow">Production tree</p>
             <h2>Robots branch into parts and research nodes</h2>
-            <p className="muted">Every node can be purchased outright, but researching it lets you assemble it from cheaper subparts.</p>
+            <p className="muted">Explore the production graph to see dependencies, research pathways, and automation knobs in one place.</p>
           </div>
         </div>
-        <div className="tree-grid">{renderTree('robot')}</div>
+        <div className="tree-graph">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            panOnScroll
+            panOnDrag
+            zoomOnScroll
+          >
+            <Background gap={16} color="#e5e7eb" />
+            <MiniMap pannable zoomable nodeColor="#c7d2fe" maskColor="rgba(15, 23, 42, 0.08)" />
+            <Controls showInteractive={false} />
+          </ReactFlow>
+        </div>
       </section>
 
       <section className="summary-section">
